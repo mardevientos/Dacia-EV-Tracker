@@ -391,13 +391,49 @@ function rGrafici() {
               y:{ticks:{color:tc(),font:{size:11}},grid:{color:gc()},title:{display:true,text:'kWh consumati',color:tc(),font:{size:10}}}}}});
 }
 
-// ─── AGGIUNGI con FOTO (Claude Vision) ───
+// ─── AGGIUNGI con FOTO (TESSERACT GRATIS) ───
 function rAggiungi() {
   document.getElementById('i-date').value = new Date().toISOString().slice(0,10);
   updateLiveEff();
 }
 
-async function analyzePhoto(input) {
+async function processPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const box = document.getElementById('photo-result');
+  const preview = document.getElementById('photoPreview');
+  const result = document.getElementById('extractedOdo');
+  
+  box.innerHTML = '<span style="color:var(--muted);">Caricamento foto...</span>';
+  
+  // Preview immagine
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  
+  // OCR Tesseract
+  Tesseract.recognize(file, 'eng+ita', {
+    logger: m => console.log(m)
+  }).then(({ data: { text } }) => {
+    const lines = text.match(/\d{1,3}[.,]?\d{0,3}/g) || [];
+    const kmOdo = lines.find(n => n.replace(/[.,]/g,'').length > 4); // Odometro >10000
+    
+    if (kmOdo) {
+      const cleanOdo = kmOdo.replace(/[.,]/g,'');
+      document.getElementById('i-kmf').value = cleanOdo;
+      result.innerHTML = `<span style="color:#3b6d11;font-weight:600;">✅ Odometro: ${cleanOdo} km</span>`;
+      updateLiveEff();
+    } else {
+      result.innerHTML = '<span style="color:#ba7517;">Odometro non trovato, inserisci manualmente</span>';
+    }
+  }).catch(() => {
+    result.innerHTML = '<span style="color:#b03020;">❌ Errore lettura foto</span>';
+  });
+} {
   const file = input.files[0];
   if (!file) return;
   const box = document.getElementById('photo-result');
