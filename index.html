@@ -147,7 +147,34 @@ tbody td{padding:8px 9px}tbody td.m{color:var(--muted)}
   <div class="card">
     <div class="ctit">Nuova sessione</div>
     <div class="fw">
-      <div class="fg"><label>Data</label><input type="date" id="i-date"></div>
+        <div class="fg">
+    <label>Data 📅</label>
+    <input type="date" id="i-date" onchange="updateCalculations()">
+  </div>
+  <div class="fg">
+    <label>Foto Odometro 📸</label>
+    <input type="file" id="odometerPhoto" accept="image/*" capture="environment" onchange="processPhoto()">
+    <img id="photoPreview" style="display:none;max-width:200px;">
+    <div id="extractedOdo"></div>
+  </div>
+  <div class="fg">
+    <label>Km iniziali</label>
+    <input type="number" id="i-kmi" onchange="updateCalculations()">
+  </div>
+  <div class="fg">
+    <label>Km finali</label>
+    <input type="number" id="i-kmf" onchange="updateCalculations()">
+  </div>
+  <div class="fg">
+    <label>Km percorsi 🔢</label>
+    <input type="number" id="i-km" class="auto-filled" readonly>
+  </div>
+  <div class="fg">
+    <label>kWh ⚡</label>
+    <input type="number" id="i-kwh" onchange="updateCalculations()">
+  </div>
+  <!-- i tuoi altri campi -->
+  <button class="btn bp" onclick="saveEntry()">Salva</button></div>
       <div class="fg"><label>kWh consumati</label><input type="number" id="i-kwh" step="0.01" placeholder="es. 12.5" oninput="updateLiveEff()"></div>
       <div class="fg"><label>Costo giornaliero (€)</label><input type="number" id="i-cost" step="0.01" placeholder="es. 7.80"></div>
     </div>
@@ -518,6 +545,35 @@ if('serviceWorker' in navigator){
     }).catch(e=>console.log('SW error',e));
   });
 }
+</script><script src="https://unpkg.com/tesseract.js@v4.1.1/dist/tesseract.min.js"></script>
+<script>
+function updateCalculations() {
+  document.getElementById('i-date').value = new Date().toISOString().split('T')[0];
+  const start = parseFloat(document.getElementById('i-kmi').value || 0);
+  const end = parseFloat(document.getElementById('i-kmf').value || 0);
+  document.getElementById('i-km').value = (end-start).toFixed(1);
+}
+
+function processPhoto() {
+  const file = document.getElementById('odometerPhoto').files[0];
+  const img = document.getElementById('photoPreview');
+  const result = document.getElementById('extractedOdo');
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.src = e.target.result;
+    img.style.display = 'block';
+    Tesseract.recognize(img, 'eng').then(({data}) => {
+      const nums = data.text.match(/\d{4,6}/);
+      if (nums) {
+        document.getElementById('i-kmf').value = nums[0];
+        result.innerHTML = `✅ ${nums[0]} km`;
+        updateCalculations();
+      }
+    });
+  };
+  reader.readAsDataURL(file);
+}
+document.addEventListener('input', updateCalculations);
 </script>
 </body>
 </html>
